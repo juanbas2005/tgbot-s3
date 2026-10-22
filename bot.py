@@ -119,6 +119,7 @@ def _http_server():
 async def amain():
     _http_server()
     await app.start()
+    print("PYROGRAM CONECTADO OK", flush=True)
     await app.send_message(*ROOT_IDS, "Bot funcionando ✅ (Render)")
     await idle()
 
