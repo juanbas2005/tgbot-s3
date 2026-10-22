@@ -7,14 +7,8 @@ import threading
 from pathlib import Path
 from urllib.parse import quote
 
-try:
-    asyncio.get_running_loop()
-except RuntimeError:
-    asyncio.new_event_loop()
-    asyncio.set_event_loop(asyncio.new_event_loop())
-
 import requests
-from pyrogram import Client, filters
+from pyrogram import Client, filters, idle
 
 ROOT_IDS = {int(os.environ["OWNER_ID"])}
 BASE = "https://s3.todus.cu/stream"
@@ -118,8 +112,13 @@ def _http_server():
         ).start()
 
 
-if __name__ == "__main__":
+async def amain():
     _http_server()
-    app.start()
-    app.send_message(*ROOT_IDS, "Bot funcionando ✅ (Render)")
-    asyncio.get_event_loop().run_forever()
+    await app.start()
+    await app.send_message(*ROOT_IDS, "Bot funcionando ✅ (Render)")
+    await idle()
+
+asyncio.run(amain())
+
+# ponytail: asyncio.run maneja el loop; Render Python 3.14 (no uso el hack del loop global) - pyrogram crea su propio loop via get_event_loop al correr.
+# con asyncio.run() no hay clash porque pyrogram sync usa get_event_loop() dentro del main.
