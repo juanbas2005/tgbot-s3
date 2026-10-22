@@ -119,13 +119,7 @@ def _http_server():
 
 
 if __name__ == "__main__":
-    import time
-
     _http_server()
     app.start()
     app.send_message(*ROOT_IDS, "Bot funcionando ✅ (Render)")
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    while True:
-        time.sleep(2)
+    asyncio.get_event_loop().run_forever()
