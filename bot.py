@@ -1,11 +1,15 @@
-# ponytail: Render usa Python 3.14, donde pyrogram exige un event loop existente
-# antes de importar; se crea aqui. Si no hay loop (entorno congelado), fall-back a get_event_loop.
+# ponytail: Render usa Python 3.14, donde 'asyncio.get_event_loop()' sin loop previo
+# lanza RuntimeError. Se pre-crea UN loop antes de importar pyrogram (que llama
+# get_event_loop() en su import) y todo corre sobre ESE mismo loop.
 import asyncio
 import json
 import os
 import threading
 from pathlib import Path
 from urllib.parse import quote
+
+_LOOP = asyncio.new_event_loop()
+asyncio.set_event_loop(_LOOP)
 
 import requests
 from pyrogram import Client, filters, idle
@@ -118,7 +122,6 @@ async def amain():
     await app.send_message(*ROOT_IDS, "Bot funcionando ✅ (Render)")
     await idle()
 
-asyncio.run(amain())
 
-# ponytail: asyncio.run maneja el loop; Render Python 3.14 (no uso el hack del loop global) - pyrogram crea su propio loop via get_event_loop al correr.
-# con asyncio.run() no hay clash porque pyrogram sync usa get_event_loop() dentro del main.
+if __name__ == "__main__":
+    _LOOP.run_until_complete(amain())
