@@ -18,7 +18,7 @@ app = Client(
     bot_token=os.environ["BOT_TOKEN"],
 )
 
-root = filters.user(ROOT_IDS)
+root = filters.user(*ROOT_IDS)
 
 
 def save_reg():
