@@ -1,14 +1,15 @@
 import json
 import os
+import threading
 from pathlib import Path
 from urllib.parse import quote
 
 import requests
-from pyrogram import Client, filters, idle
+from pyrogram import Client, filters
 
 ROOT_IDS = {int(os.environ["OWNER_ID"])}
 BASE = "https://s3.todus.cu/stream"
-REG_FILE = Path("/tmp/files.json")  # ponytail: disco efímero en Render, el registro se reinicia en cada deploy
+REG_FILE = Path("/tmp/files.json")
 REG = json.loads(REG_FILE.read_text()) if REG_FILE.exists() else {}
 
 app = Client(
@@ -27,7 +28,7 @@ def save_reg():
 
 @app.on_message(root & filters.command("start"))
 def start(_, msg):
-    msg.reply("Root ✅\nEnvíame cualquier archivo (doc, foto, video, audio…) y lo subo a S3.\n"
+    msg.reply("Root ✅\nEnvíame cualquier archivo y lo subo a S3.\n"
               "/files — listar · /rm <nombre> — borrar · /ping")
 
 
@@ -62,7 +63,7 @@ def upload(_, msg):
     status = msg.reply("⏳ Procesando…")
     path = None
     try:
-        path = msg.download()  # acepta cualquier tipo de media
+        path = msg.download()
         name = os.path.basename(path)
         url = f"{BASE}/GRATIS/tg_{msg.from_user.id}/{quote(name, safe='')}"
         status.edit(f"⏳ Subiendo {name}…")
@@ -82,16 +83,14 @@ def upload(_, msg):
             os.remove(path)
 
 
-# ponytail: los handlers root van primero (primer match gana); esto es el rechazo del resto
 @app.on_message(~root)
 def deny(_, msg):
     msg.reply("⛔ Solo root")
 
 
-# ponytail: Render web service exige bindear $PORT o mata el deploy; solo para health checks
-if os.getenv("PORT"):
-    import threading
-    from http.server import HTTPServer, BaseHTTPRequestHandler
+def _http_server():
+    # ponytail: Render free exige responder en $PORT o mata el deploy
+    from http.server import BaseHTTPRequestHandler, HTTPServer
 
     class Health(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -102,13 +101,23 @@ if os.getenv("PORT"):
         def log_message(self, *a):
             pass
 
-    threading.Thread(
-        target=lambda: HTTPServer(("0.0.0.0", int(os.environ["PORT"])), Health).serve_forever(),
-        daemon=True,
-    ).start()
+    port = int(os.environ.get("PORT", "0"))
+    if port:
+        threading.Thread(
+            target=HTTPServer(("0.0.0.0", port), Health).serve_forever,
+            daemon=True,
+        ).start()
 
-app.start()
-app.send_message(*ROOT_IDS, "Bot funcionando ✅ (Render)")
 
-from pyrogram import idle
-idle()
+if __name__ == "__main__":
+    import asyncio
+    import time
+
+    _http_server()
+    app.start()
+    app.send_message(*ROOT_IDS, "Bot funcionando ✅ (Render)")
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    while True:
+        time.sleep(2)
