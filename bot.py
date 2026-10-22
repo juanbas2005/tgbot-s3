@@ -1,8 +1,17 @@
+# ponytail: Render usa Python 3.14, donde pyrogram exige un event loop existente
+# antes de importar; se crea aqui. Si no hay loop (entorno congelado), fall-back a get_event_loop.
+import asyncio
 import json
 import os
 import threading
 from pathlib import Path
 from urllib.parse import quote
+
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.new_event_loop()
+    asyncio.set_event_loop(asyncio.new_event_loop())
 
 import requests
 from pyrogram import Client, filters
@@ -110,7 +119,6 @@ def _http_server():
 
 
 if __name__ == "__main__":
-    import asyncio
     import time
 
     _http_server()
